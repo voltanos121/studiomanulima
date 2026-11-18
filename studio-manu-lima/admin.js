@@ -7,15 +7,68 @@
  const today=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
  function feedback(el,msg,error=true){el.textContent=msg;el.className="form-feedback "+(error?"error":"success")}
  function requireDb(){if(!db){feedback($("#loginFeedback"),"Configure a URL e a chave anon do Supabase no arquivo config.js.");return false}return true}
- function showView(name){currentView=name;document.querySelectorAll(".admin-view").forEach(x=>x.classList.add("hidden"));$("#view-"+name)?.classList.remove("hidden");document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x.dataset.view===name));$("#viewTitle").textContent=({dashboard:"Visão geral",appointments:"Agendamentos",staff:"Equipe",services:"Serviços",gallery:"Galeria",hours:"Disponibilidade",settings:"Configurações",administrators:"Administradores"})[name];loadView(name)}
+ function showView(name){currentView=name;document.querySelectorAll(".admin-view").forEach(x=>x.classList.add("hidden"));$("#view-"+name)?.classList.remove("hidden");document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x.dataset.view===name));$("#viewTitle").textContent=({dashboard:"Visão geral",appointments:"Agendamentos",staff:"Equipe",earnings:"Rendimentos",services:"Serviços",gallery:"Galeria",hours:"Disponibilidade",settings:"Configurações",administrators:"Administradores"})[name];loadView(name)}
  document.querySelectorAll("[data-view]").forEach(a=>a.addEventListener("click",e=>{e.preventDefault();showView(a.dataset.view)}));
  document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.go)));
  async function checkSession(){if(!requireDb())return;const {data}=await db.auth.getSession();if(data.session){const {data:admin}=await db.from("admins").select("user_id").eq("user_id",data.session.user.id).maybeSingle();if(admin)enter(data.session.user);else{await db.auth.signOut();$("#loginView").classList.remove("hidden");feedback($("#loginFeedback"),"Esta conta não possui permissão administrativa. Funcionários devem usar a área individual.");}}else{$("#loginView").classList.remove("hidden");$("#adminContent").classList.add("hidden")}}
  function enter(user){currentUserId=user.id;$("#loginView").classList.add("hidden");$("#adminContent").classList.remove("hidden");$("#logoutButton").classList.remove("hidden");$("#adminEmail").textContent=user.email||"";showView("dashboard")}
  $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();if(!requireDb())return;let f=new FormData(e.currentTarget);const {data,error}=await db.auth.signInWithPassword({email:f.get("email"),password:f.get("password")});if(error)feedback($("#loginFeedback"),"Não foi possível entrar. Confira e-mail e senha.");else{const {data:admin}=await db.from("admins").select("user_id").eq("user_id",data.user.id).maybeSingle();if(!admin){await db.auth.signOut();feedback($("#loginFeedback"),"Esta conta não é administradora. Funcionários devem usar funcionario.html.");}else enter(data.user)}});
  $("#logoutButton").addEventListener("click",async()=>{await db.auth.signOut();location.reload()});
- async function loadView(v){if(v==="dashboard"||v==="appointments")await loadAppointments();if(v==="staff")await loadStaff();if(v==="dashboard"||v==="services")await loadServices();if(v==="gallery")await loadGallery();if(v==="hours")await loadHours();if(v==="settings")await loadSettings();if(v==="administrators")await loadAdministrators()}
+ async function loadView(v){if(v==="dashboard"||v==="appointments")await loadAppointments();if(v==="staff")await loadStaff();if(v==="earnings")await loadEarnings();if(v==="dashboard"||v==="services")await loadServices();if(v==="gallery")await loadGallery();if(v==="hours")await loadHours();if(v==="settings")await loadSettings();if(v==="administrators")await loadAdministrators()}
  async function loadAppointments(){let {data,error}=await db.from("agendamentos").select("*,clientes(nome,telefone),servicos(nome),profissionais(nome)").order("data").order("horario_inicio");if(error){$("#appointmentsTable").textContent=error.message;return}appointments=data||[];let todayRows=appointments.filter(a=>a.data===today()&&!["cancelado","concluido"].includes(a.status));$("#statToday").textContent=todayRows.length;$("#statPending").textContent=appointments.filter(a=>a.status==="pendente").length;$("#statConfirmed").textContent=appointments.filter(a=>a.status==="confirmado").length;const html=tableAppointments(appointments);$("#appointmentsTable").innerHTML=html;$("#dashboardAppointments").innerHTML=tableAppointments(appointments.filter(a=>a.data>=today()&&!["cancelado","concluido"].includes(a.status)).slice(0,8));}
+
+ // Rendimentos: os dados são calculados somente com os serviços marcados como concluídos.
+ // O total é faturamento bruto estimado, com base no preço atual do serviço no banco.
+ async function loadEarnings(){
+   const box=$("#earningsTable");
+   const refresh=$("#refreshEarnings");
+   if(!box||!db)return;
+   box.textContent="Carregando rendimentos...";
+   if(refresh){refresh.disabled=true;refresh.textContent="Atualizando...";}
+   const currency=n=>Number(n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+   const integer=n=>Number(n||0).toLocaleString("pt-BR");
+   const setStat=(id,value)=>{const el=$(id);if(el)el.textContent=value;};
+   try{
+     const {data,error}=await db.rpc("get_staff_performance");
+     if(error)throw error;
+     const rows=Array.isArray(data)?data:[];
+     const completed=rows.reduce((acc,row)=>acc+Number(row.atendimentos_concluidos||0),0);
+     const gross=rows.reduce((acc,row)=>acc+Number(row.rendimento_bruto||0),0);
+     const active=rows.filter(row=>Number(row.atendimentos_concluidos||0)>0).length;
+     setStat("#earningsGross",currency(gross));
+     setStat("#earningsCompleted",integer(completed));
+     setStat("#earningsProfessionals",integer(active));
+     if(!rows.length){
+       box.innerHTML="<p class='hint'>Ainda não há profissionais cadastrados para apresentar.</p>";
+       return;
+     }
+     // Ranking ordenado por número de atendimentos e, em caso de empate, por rendimento.
+     rows.sort((a,b)=>Number(b.atendimentos_concluidos||0)-Number(a.atendimentos_concluidos||0)
+       ||Number(b.rendimento_bruto||0)-Number(a.rendimento_bruto||0)
+       ||String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
+     box.innerHTML=`<table><thead><tr><th>Ranking</th><th>Profissional</th><th>Perfil</th><th>Atendimentos concluídos</th><th>Rendimento bruto</th><th>Avaliação média</th><th>Avaliações</th></tr></thead><tbody>${rows.map((row,i)=>{
+       const count=Number(row.total_avaliacoes||0);
+       const rating=count>0?Number(row.media_avaliacoes||0).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1}):"—";
+       return `<tr><td><strong>${i+1}º</strong></td><td>${esc(row.nome||"—")}</td><td>${row.tipo==="admin"?"Administradora":"Funcionária"}</td><td>${integer(row.atendimentos_concluidos)}</td><td><strong>${currency(row.rendimento_bruto)}</strong></td><td>${rating}</td><td>${integer(count)}</td></tr>`;
+     }).join("")}</tbody></table>`;
+   }catch(error){
+     console.error("Erro ao carregar rendimentos:",error);
+     setStat("#earningsGross","—");
+     setStat("#earningsCompleted","—");
+     setStat("#earningsProfessionals","—");
+     const details=error?.message||"Erro desconhecido";
+     const tip=(error?.code==="PGRST202"||/could not find the function/i.test(details))
+       ?" A função get_staff_performance não foi localizada. Execute o SQL de rendimentos incluído no pacote, no mesmo projeto Supabase do site."
+       :(/acesso restrito|permission denied|permiss[aã]o/i.test(details)
+         ?" Verifique se você está conectada com uma conta cadastrada em public.admins."
+         :" Confira o Supabase e tente novamente.");
+     box.innerHTML=`<p class="form-feedback error" role="alert">Não foi possível carregar os rendimentos: ${esc(details)}.${esc(tip)}</p>`;
+   }finally{
+     if(refresh){refresh.disabled=false;refresh.textContent="Atualizar";}
+   }
+ }
+ $("#refreshEarnings")?.addEventListener("click",loadEarnings);
+
  function tableAppointments(rows){if(!rows.length)return"<p class='hint'>Nenhum agendamento encontrado.</p>";return `<table><thead><tr><th>Cliente</th><th>Serviço</th><th>Profissional</th><th>Data</th><th>Horário</th><th>Status</th><th>Ações</th></tr></thead><tbody>${rows.map(a=>`<tr><td>${esc(a.clientes?.nome||"Cliente")}<br>${esc(a.clientes?.telefone||"")}</td><td>${esc(a.servicos?.nome||"—")}</td><td>${esc(a.profissionais?.nome||"—")}</td><td>${new Date(a.data+"T12:00:00").toLocaleDateString("pt-BR")}</td><td>${String(a.horario_inicio).slice(0,5)}–${String(a.horario_fim).slice(0,5)}</td><td><span class="status ${a.status}">${esc(a.status)}</span></td><td>${a.status==="pendente"?`<button data-status="${a.id}" data-value="confirmado">Confirmar</button>`:""}${!["cancelado","concluido"].includes(a.status)?`<button data-status="${a.id}" data-value="cancelado">Cancelar</button><button data-status="${a.id}" data-value="concluido">Concluir</button>`:""}</td></tr>`).join("")}</tbody></table>`}
  document.addEventListener("click",async e=>{let b=e.target.closest("[data-status]");if(!b)return;const {error}=await db.from("agendamentos").update({status:b.dataset.value}).eq("id",b.dataset.status);if(error)alert("Não foi possível atualizar: "+error.message);else loadAppointments()});
  $("#appointmentSearch").addEventListener("input",e=>{let q=e.target.value.toLowerCase();$("#appointmentsTable").innerHTML=tableAppointments(appointments.filter(a=>(a.clientes?.nome||"").toLowerCase().includes(q)||(a.servicos?.nome||"").toLowerCase().includes(q)))});
