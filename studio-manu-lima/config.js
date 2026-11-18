@@ -8,6 +8,6 @@
 */
 window.STUDIO_CONFIG = {
   SUPABASE_URL: "https://vvtqgezrctmsznvjtzjt.supabase.co",
-  SUPABASE_ANON_KEY: "sb_publishable_lOuBkOGU5W2odW20iVtmi5JEtPJx2",
+  SUPABASE_ANON_KEY: "sb_publishable_lOuBkOGU5W2odW20iVtmiA_5JEtPJx2",
   WHATSAPP: "5522992072123"
 };
