@@ -85,12 +85,41 @@
    const {data,error}=await db.from("profissionais").select("*").order("ordem").order("nome");
    if(error){$("#staffTable").textContent=error.message;return;}
    staffRows=data||[];
-   $("#staffTable").innerHTML=staffRows.length?`<table><thead><tr><th>Profissional</th><th>Perfil</th><th>Status</th><th>Login</th><th>Ações</th></tr></thead><tbody>${staffRows.map(x=>`<tr><td>${esc(x.nome)}</td><td>${x.tipo==="admin"?"Administradora":"Funcionária"}</td><td>${x.ativo?"Ativo":"Inativo"}</td><td>${x.auth_user_id?"Cadastro concluído":(x.tipo==="admin"?"Conta administrativa":"Convite pendente")}</td><td>${x.tipo!=="admin"?(!x.auth_user_id?`<button data-staff-invite="${x.id}">Gerar QR Code</button>`:"")+`<button data-staff-toggle="${x.id}" data-active="${x.ativo}">${x.ativo?"Desativar":"Ativar"}</button><button data-staff-delete="${x.id}">Excluir</button>`:"<span class='hint'>Perfil fixo</span>"}</td></tr>`).join("")}</tbody></table>`:"Nenhum profissional cadastrado.";
+   $("#staffTable").innerHTML=staffRows.length?`<table><thead><tr><th>Profissional</th><th>Perfil</th><th>WhatsApp</th><th>Status</th><th>Login</th><th>Ações</th></tr></thead><tbody>${staffRows.map(x=>`<tr><td>${esc(x.nome)}</td><td>${x.tipo==="admin"?"Administradora":"Funcionária"}</td><td>${x.tipo==="admin"?"Geral (Configurações)":x.whatsapp?`${esc(x.whatsapp)}${x.whatsapp_opt_in?"":" · Sem autorização"}`:"<strong>Não cadastrado</strong>"}</td><td>${x.ativo?"Ativo":"Inativo"}</td><td>${x.auth_user_id?"Cadastro concluído":(x.tipo==="admin"?"Conta administrativa":"Convite pendente")}</td><td>${x.tipo!=="admin"?`<button data-staff-edit="${x.id}">Editar contato</button>`+(!x.auth_user_id?`<button data-staff-invite="${x.id}">Gerar QR Code</button>`:"")+`<button data-staff-toggle="${x.id}" data-active="${x.ativo}">${x.ativo?"Desativar":"Ativar"}</button><button data-staff-delete="${x.id}">Excluir</button>`:"<span class='hint'>Perfil fixo</span>"}</td></tr>`).join("")}</tbody></table>`:"Nenhum profissional cadastrado.";
  }
- $("#newStaff").addEventListener("click",()=>{$("#staffForm").reset();$("#staffForm").classList.remove("hidden")});
- $("#cancelStaff").addEventListener("click",()=>$("#staffForm").classList.add("hidden"));
- $("#staffForm").addEventListener("submit",async e=>{e.preventDefault();const f=e.currentTarget;const d={nome:f.elements.nome.value.trim(),tipo:"funcionario",ativo:true,ordem:staffRows.length};const {error}=await db.from("profissionais").insert(d);if(error)alert("Não foi possível cadastrar: "+error.message);else{f.reset();f.classList.add("hidden");loadStaff()}});
+ let staffEditingId=null;
+ function openStaffForm(row=null){
+   const form=$("#staffForm");
+   form.reset();staffEditingId=row?.id||null;
+   form.elements.nome.value=row?.nome||"";
+   form.elements.whatsapp.value=row?.whatsapp||"";
+   form.elements.whatsapp_opt_in.checked=Boolean(row?.whatsapp_opt_in);
+   $("#staffFormTitle").textContent=row?"Editar profissional e WhatsApp":"Novo profissional";
+   $("#saveStaffButton").textContent=row?"Salvar alterações":"Salvar profissional";
+   form.classList.remove("hidden");
+   form.scrollIntoView({behavior:"smooth",block:"start"});
+ }
+ $("#newStaff").addEventListener("click",()=>openStaffForm());
+ $("#cancelStaff").addEventListener("click",()=>{staffEditingId=null;$("#staffForm").classList.add("hidden")});
+ $("#staffForm").addEventListener("submit",async e=>{
+   e.preventDefault();
+   const form=e.currentTarget;
+   const number=String(form.elements.whatsapp.value||"").replace(/\D/g,"");
+   if(!/^[0-9]{10,15}$/.test(number)){
+     alert("Informe WhatsApp com DDI e DDD, usando de 10 a 15 dígitos. Exemplo: 5522999999999.");return;
+   }
+   if(!form.elements.whatsapp_opt_in.checked){alert("Confirme a autorização da profissional para receber mensagens e avisos de agendamento.");return;}
+   const payload={nome:form.elements.nome.value.trim(),whatsapp:number,whatsapp_opt_in:true};
+   const saving=staffEditingId
+     ? db.from("profissionais").update(payload).eq("id",staffEditingId)
+     : db.from("profissionais").insert({...payload,tipo:"funcionario",ativo:true,ordem:staffRows.length});
+   const {error}=await saving;
+   if(error){alert("Não foi possível salvar a profissional: "+error.message);return;}
+   staffEditingId=null;form.reset();form.classList.add("hidden");await loadStaff();
+ });
  document.addEventListener("click",async e=>{
+   const edit=e.target.closest("[data-staff-edit]");
+   if(edit){const row=staffRows.find(x=>x.id===edit.dataset.staffEdit);if(row&&row.tipo!=="admin")openStaffForm(row);return;}
    const invite=e.target.closest("[data-staff-invite]");
    if(invite){invite.disabled=true;const {data,error}=await db.functions.invoke("create-staff-invite",{body:{staff_id:invite.dataset.staffInvite}});invite.disabled=false;if(error||!data?.url){alert("Não foi possível gerar o convite. Confira se a Edge Function create-staff-invite foi publicada. "+(error?.message||""));return;}$("#invitePanel").classList.remove("hidden");$("#inviteDescription").textContent="Convite para "+(staffRows.find(x=>x.id===invite.dataset.staffInvite)?.nome||"funcionário");$("#inviteQr").innerHTML="";new QRCode($("#inviteQr"),{text:data.url,width:220,height:220});$("#inviteUrl").textContent=data.url;$("#invitePanel").scrollIntoView({behavior:"smooth"});}
    const toggle=e.target.closest("[data-staff-toggle]");if(toggle){const {error}=await db.from("profissionais").update({ativo:toggle.dataset.active!=="true"}).eq("id",toggle.dataset.staffToggle);if(error)alert(error.message);loadStaff();}

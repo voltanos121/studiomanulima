@@ -117,14 +117,36 @@
     // A notificação automática à profissional é enviada no servidor pela WhatsApp Cloud API.
     // Falhas na notificação não desfazem a reserva já gravada.
     db.functions.invoke("notify-staff-booking",{body:{booking_code:data.code,booking_phone:payload.p_phone}})
-      .then(({error:notifyError})=>{if(notifyError)console.warn("Reserva salva, mas a notificação WhatsApp da profissional falhou:",notifyError);})
+      .then(({data:notifyResult,error:notifyError})=>{if(notifyError||notifyResult?.success===false)console.warn("Reserva salva, mas a notificação automática da profissional falhou:",notifyError||notifyResult?.message);})
       .catch(err=>console.warn("Falha ao chamar notificação WhatsApp:",err));
     const start=String(data.start_time).slice(0,5),end=String(data.end_time).slice(0,5);
     const dateLabel=new Date(`${payload.p_date}T12:00:00`).toLocaleDateString("pt-BR");
-    const wa=settings.whatsapp||cfg.WHATSAPP||"5522992072123";
     const message=`Olá! Acabei de solicitar um agendamento pelo site do Studio Manu Lima.\n\nNome: ${payload.p_name}\nProfissional: ${professional.nome}\nServiço: ${service.nome}\nData: ${dateLabel}\nHorário: ${start} às ${end}\nCódigo: ${data.code}\n\nGostaria de confirmar meu atendimento.`;
     $("#successDetails").textContent=`${service.nome} com ${professional.nome} · ${dateLabel} · ${start} às ${end}. Código: ${data.code}.`;
-    $("#successWhatsApp").href=`https://wa.me/${phoneDigits(wa)}?text=${encodeURIComponent(message)}`;
+    // Consulte o telefone pela reserva criada, nunca pelo contato geral do estúdio.
+    // O servidor confere o código + telefone da cliente e usa o profissional_id salvo na reserva.
+    const waLink=$("#successWhatsApp"),waNote=$("#successModal .modal-small");
+    waLink.removeAttribute("href");
+    waLink.style.display="none";
+    try {
+      const {data:contact,error:contactError}=await db.rpc("get_booking_whatsapp",{
+        p_code:data.code,
+        p_phone:payload.p_phone
+      });
+      if(contactError)throw contactError;
+      const targetPhone=phoneDigits(contact?.whatsapp);
+      if(contact?.success && /^[0-9]{10,15}$/.test(targetPhone)){
+        waLink.href=`https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`;
+        waLink.style.display="";
+        if(waNote)waNote.textContent=`Sua reserva foi salva. Toque abaixo para enviar a confirmação diretamente para ${professional.nome}.`;
+      } else {
+        console.warn("WhatsApp da profissional indisponível:",contact?.message||"Número não cadastrado");
+        if(waNote)waNote.textContent="Sua reserva foi salva, mas o WhatsApp da profissional não está disponível. Entre em contato com o estúdio pelo botão de WhatsApp geral da página.";
+      }
+    }catch(contactError){
+      console.error("Não foi possível consultar o WhatsApp da profissional:",contactError);
+      if(waNote)waNote.textContent="Sua reserva foi salva. Não foi possível consultar o WhatsApp da profissional neste momento; entre em contato pelo botão de WhatsApp geral da página.";
+    }
     $("#successModal").classList.add("open");e.currentTarget.reset();$("#bookingDate").min=todayLocal();$("#slots").innerHTML='<p class="muted">Selecione um serviço e uma data para consultar os horários.</p>';selectedSlot=null;
   });
   function fStaffSelected(){return Boolean($("#staffSelect").value);}
