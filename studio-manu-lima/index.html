@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Studio Manu Lima — manicure, nail designer e cuidados especiais para suas unhas em Araruama, RJ.">
+  <meta name="theme-color" content="#f8eef0">
+  <title>Studio Manu Lima | Nail Designer & Beauty Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+<header class="site-header">
+  <div class="container nav">
+    <a class="brand" href="#inicio" aria-label="Studio Manu Lima - início">
+      <span class="brand-mark">M</span><span><strong>Studio Manu Lima</strong><small>NAIL DESIGNER · BEAUTY STUDIO</small></span>
+    </a>
+    <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-expanded="false">☰</button>
+    <nav id="mainNav">
+      <a href="#inicio">Início</a><a href="#sobre">O Studio</a><a href="#servicos">Serviços</a>
+      <a href="#galeria">Galeria</a><a href="#agenda">Agendamento</a><a href="#contato">Contato</a>
+    </nav>
+    <a class="button button-dark nav-cta" href="#agenda">Agendar horário <span>↗</span></a>
+  </div>
+</header>
+
+<main>
+<section class="hero" id="inicio">
+  <div class="hero-glow"></div>
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <span class="eyebrow"><i></i> Beleza em cada detalhe</span>
+      <h1>Suas unhas,<br><em>sua expressão</em><br>de beleza.</h1>
+      <p>Um momento só seu, com cuidado, técnica e delicadeza. Descubra uma experiência especial em nail design no Studio Manu Lima.</p>
+      <div class="hero-actions"><a class="button button-dark" href="#agenda">Agendar meu horário <span>↗</span></a><a class="text-link" href="#galeria">Conhecer trabalhos <span>↓</span></a></div>
+      <div class="hero-proof"><span class="stars">★★★★★</span><span><b>5.0</b> · 19 avaliações informadas no perfil comercial</span></div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-photo" role="img" aria-label="Inspiração de unhas delicadas"></div>
+      <div class="photo-note"><span class="note-icon">✦</span><span><b>Detalhes que encantam</b><small>Seu estilo em cada criação</small></span></div>
+      <div class="round-stamp">STUDIO<br>MANU LIMA<br>✧ BEAUTY ✧</div>
+    </div>
+  </div>
+  <div class="hero-bottom container"><span>ARARUAMA · RIO DE JANEIRO</span><span>BELEZA • CUIDADO • AUTENTICIDADE</span></div>
+</section>
+
+<section class="intro section" id="sobre">
+  <div class="container intro-grid">
+    <div><span class="eyebrow">Bem-vinda ao Studio</span><h2>Um cuidado especial<br>para <em>você.</em></h2></div>
+    <div class="intro-text"><p id="aboutText">No Studio Manu Lima, cada atendimento é pensado para valorizar sua beleza e oferecer uma experiência acolhedora. Técnica, atenção aos detalhes e carinho em cada etapa.</p><a class="under-link" href="#agenda">Reserve seu momento <span>↗</span></a></div>
+  </div>
+  <div class="container feature-strip"><div><b>01</b><span>Atendimento cuidadoso</span></div><div><b>02</b><span>Detalhes personalizados</span></div><div><b>03</b><span>Seu estilo em destaque</span></div></div>
+</section>
+
+<section class="section services-section" id="servicos">
+  <div class="container">
+    <div class="section-heading"><div><span class="eyebrow">O que fazemos</span><h2>Serviços & <em>cuidados</em></h2></div><p>Escolha o procedimento ideal para você. Os valores e tempos são apresentados conforme o cadastro atualizado do Studio.</p></div>
+    <div class="service-grid" id="servicesGrid"><div class="loading-card">Carregando serviços...</div></div>
+  </div>
+</section>
+
+<section class="gallery-section section" id="galeria">
+  <div class="container">
+    <div class="section-heading"><div><span class="eyebrow">Inspire-se</span><h2>Arte em cada <em>unha.</em></h2></div><p>Um pouco do nosso universo de cores, técnicas e possibilidades.</p></div>
+    <div class="gallery-filters" id="galleryFilters"><button class="filter active" data-filter="all">Todas</button></div>
+    <div class="gallery-grid" id="galleryGrid"><div class="loading-card">Carregando galeria...</div></div>
+  </div>
+</section>
+
+<section class="booking-section section" id="agenda">
+  <div class="container booking-layout">
+    <div class="booking-intro"><span class="eyebrow">Seu momento começa aqui</span><h2>Vamos reservar<br>um horário para <em>você?</em></h2><p>Escolha o procedimento, confira os horários realmente disponíveis e envie sua solicitação. A reserva fica registrada no sistema e a equipe poderá confirmar pelo WhatsApp.</p>
+      <div class="booking-assurance"><span>✦</span><div><b>Disponibilidade atualizada</b><small>Os horários ocupados são retirados da seleção.</small></div></div>
+      <div class="booking-assurance"><span>♡</span><div><b>Atendimento personalizado</b><small>Informe detalhes importantes no campo de observações.</small></div></div>
+    </div>
+    <form class="booking-card" id="bookingForm">
+      <div class="form-title"><span>AGENDAMENTO ONLINE</span><h3>Escolha seu atendimento</h3></div>
+      <label>Seu nome<input name="name" autocomplete="name" required maxlength="100" placeholder="Como podemos te chamar?"></label>
+      <label>WhatsApp<input name="phone" autocomplete="tel" required maxlength="25" placeholder="(22) 99999-9999"></label>
+      <label>Procedimento<select name="service" id="serviceSelect" required><option value="">Carregando serviços...</option></select></label>
+      <label>Profissional<select name="staff" id="staffSelect" required><option value="">Carregando profissionais...</option></select></label>
+      <label>Data desejada<input type="date" name="date" id="bookingDate" required></label>
+      <div class="slot-label"><label>Horários disponíveis</label><span>Intervalos de 30 minutos</span></div>
+      <div class="slots" id="slots"><p class="muted">Selecione um serviço e uma data para consultar os horários.</p></div>
+      <input type="hidden" name="time" id="selectedTime">
+      <label>Observações <small>(opcional)</small><textarea name="notes" rows="3" maxlength="600" placeholder="Conte se deseja alguma decoração ou detalhe especial..."></textarea></label>
+      <button class="button button-dark button-full" type="submit" id="bookingSubmit">Solicitar agendamento <span>↗</span></button>
+      <p class="form-legal">Ao solicitar, você concorda com o uso dos dados informados para organizar seu atendimento. A reserva ficará aguardando confirmação do Studio.</p>
+      <div class="form-feedback" id="bookingFeedback" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+</section>
+
+
+<section class="section review-section" id="avaliar">
+  <div class="container booking-layout">
+    <div class="booking-intro">
+      <span class="eyebrow">Sua opinião importa</span>
+      <h2>Conte como foi<br>seu <em>atendimento.</em></h2>
+      <p>Depois que o atendimento for concluído, você poderá avaliar a profissional que cuidou de você. Use o código da reserva e o mesmo WhatsApp informado no agendamento.</p>
+      <div class="booking-assurance"><span>★</span><div><b>Avaliação vinculada à reserva</b><small>Somente atendimentos concluídos podem receber avaliação, e cada reserva pode ser avaliada uma vez.</small></div></div>
+    </div>
+    <form class="booking-card" id="reviewForm">
+      <div class="form-title"><span>AVALIAÇÃO DO ATENDIMENTO</span><h3>Como foi sua experiência?</h3></div>
+      <label>Código do agendamento<input name="code" required maxlength="16" placeholder="Ex.: A1B2C3D4E5"></label>
+      <label>WhatsApp usado na reserva<input name="phone" required maxlength="25" placeholder="(22) 99999-9999"></label>
+      <label>Sua nota
+        <select name="rating" required>
+          <option value="">Selecione uma nota</option>
+          <option value="5">★★★★★ — Excelente</option>
+          <option value="4">★★★★☆ — Muito bom</option>
+          <option value="3">★★★☆☆ — Bom</option>
+          <option value="2">★★☆☆☆ — Regular</option>
+          <option value="1">★☆☆☆☆ — Precisa melhorar</option>
+        </select>
+      </label>
+      <label>Comentário <small>(opcional)</small><textarea name="comment" rows="3" maxlength="500" placeholder="Conte um pouco sobre seu atendimento..."></textarea></label>
+      <button class="button button-dark button-full" type="submit" id="reviewSubmit">Enviar avaliação ↗</button>
+      <p class="form-legal">Sua avaliação será associada à profissional do agendamento. Não informe dados pessoais no comentário.</p>
+      <div class="form-feedback" id="reviewFeedback" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+</section>
+
+<section class="contact-section section" id="contato">
+  <div class="container contact-grid">
+    <div><span class="eyebrow">Estamos por aqui</span><h2>Venha viver esse<br>momento <em>com a gente.</em></h2><p>Fale conosco para tirar dúvidas ou consulte a localização do Studio.</p>
+      <div class="contact-list">
+        <div><span>WHATSAPP / TELEFONE</span><a id="contactPhone" href="tel:+5522992072123">+55 22 99207-2123</a></div>
+        <div><span>ENDEREÇO</span><p id="contactAddress">Av. Gladstone de Oliveira - Araruama, RJ, 28980-680</p></div>
+        <div><span>HORÁRIO DE ATENDIMENTO</span><p id="contactHours">Consulte a disponibilidade no agendamento online.</p></div>
+      </div>
+      <a class="button button-dark" id="mapsButton" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Av.%20Gladstone%20de%20Oliveira%2C%20Araruama%2C%20RJ">Como chegar <span>↗</span></a>
+    </div>
+    <div class="map-card"><iframe id="mapFrame" title="Localização do Studio Manu Lima no mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=Av.%20Gladstone%20de%20Oliveira%2C%20Araruama%2C%20RJ&output=embed"></iframe><div class="map-caption"><span>⌖</span><div><b>Studio Manu Lima</b><small id="mapAddress">Araruama · Rio de Janeiro</small></div><a id="mapOpen" href="https://www.google.com/maps/dir/?api=1&destination=Av.%20Gladstone%20de%20Oliveira%2C%20Araruama%2C%20RJ" target="_blank" rel="noopener">Abrir mapa ↗</a></div></div>
+  </div>
+</section>
+</main>
+
+<footer><div class="container footer-main"><a class="brand" href="#inicio"><span class="brand-mark">M</span><span><strong>Studio Manu Lima</strong><small>NAIL DESIGNER · BEAUTY STUDIO</small></span></a><p>Beleza, cuidado e delicadeza em cada detalhe.</p><a href="#inicio">Voltar ao topo ↑</a></div><div class="container footer-bottom"><span>© <span id="year"></span> Studio Manu Lima. Todos os direitos reservados.</span><a href="#avaliar">Avaliar atendimento</a><a href="admin.html">Área administrativa</a></div></footer>
+<a class="whatsapp-float" id="whatsappFloat" href="https://wa.me/5522992072123" target="_blank" rel="noopener" aria-label="Falar pelo WhatsApp">◉ <span>WhatsApp</span></a>
+<div class="modal" id="successModal" aria-hidden="true"><div class="modal-panel"><button class="modal-close" id="modalClose" aria-label="Fechar">×</button><div class="success-mark">✓</div><span class="eyebrow">Solicitação registrada</span><h2>Obrigada por escolher<br><em>o Studio Manu Lima!</em></h2><p id="successDetails"></p><p class="modal-small">Sua solicitação foi salva. Envie a mensagem pelo WhatsApp para facilitar a confirmação do atendimento.</p><a class="button button-dark button-full" id="successWhatsApp" target="_blank" rel="noopener">Continuar pelo WhatsApp ↗</a></div></div>
+</body></html>
