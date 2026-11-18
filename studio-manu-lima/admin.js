@@ -81,12 +81,35 @@
  async function loadGallery(){let {data,error}=await db.from("galeria").select("*").order("ordem");if(error)return;$("#galleryAdminGrid").innerHTML=(data||[]).map(x=>`<article><img src="${esc(x.imagem_url)}" alt=""><p><b>${esc(x.titulo)}</b><br>${esc(x.categoria||"")}</p><button data-gallery-delete="${x.id}">Excluir</button><button data-gallery-toggle="${x.id}" data-active="${x.ativo}">${x.ativo?"Ocultar":"Publicar"}</button></article>`).join("")||"Galeria vazia."}
  $("#galleryForm").addEventListener("submit",async e=>{e.preventDefault();let f=e.currentTarget,d=Object.fromEntries(new FormData(f));const file=f.elements.image_file.files[0];if(file){if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>8*1024*1024){alert("Escolha uma imagem JPG, PNG ou WEBP de até 8 MB.");return}const safe=file.name.toLowerCase().replace(/[^a-z0-9.-]/g,"-");const path=`${Date.now()}-${safe}`;const {data:up,error:upError}=await db.storage.from("studio-gallery").upload(path,file,{upsert:false,contentType:file.type});if(upError){alert("Falha no upload. Confira se o bucket studio-gallery e suas políticas foram criados: "+upError.message);return}d.imagem_url=db.storage.from("studio-gallery").getPublicUrl(up.path).data.publicUrl;}if(!d.imagem_url){alert("Selecione uma imagem ou informe uma URL.");return}delete d.image_file;d.ordem=Number(d.ordem||0);d.ativo=true;let {error}=await db.from("galeria").insert(d);if(error)alert(error.message);else{f.reset();loadGallery()}});
  document.addEventListener("click",async e=>{let del=e.target.closest("[data-gallery-delete]"),tog=e.target.closest("[data-gallery-toggle]");if(del&&confirm("Excluir imagem?")){let {error}=await db.from("galeria").delete().eq("id",del.dataset.galleryDelete);if(error)alert(error.message);loadGallery()}if(tog){let {error}=await db.from("galeria").update({ativo:tog.dataset.active!=="true"}).eq("id",tog.dataset.galleryToggle);if(error)alert(error.message);loadGallery()}});
+ // O profissional removido fica apenas para auditoria: não recebe reservas novas
+ // nem consegue acessar o mural, mas mantém seus atendimentos e rendimentos históricos.
+ let showArchivedStaff=false;
+ function renderStaffRows(){
+   const archived=staffRows.filter(x=>Boolean(x.arquivado_em));
+   const visible=staffRows.filter(x=>!x.arquivado_em||showArchivedStaff);
+   const control=`<label class="check-label" style="display:inline-flex;align-items:center;gap:8px;margin:10px 0 14px;cursor:pointer"><input type="checkbox" id="showArchivedStaff" ${showArchivedStaff?"checked":""}> Mostrar profissionais removidos (${archived.length})</label>`;
+   const table=visible.length?`<table><thead><tr><th>Profissional</th><th>Perfil</th><th>WhatsApp</th><th>Status</th><th>Login</th><th>Ações</th></tr></thead><tbody>${visible.map(x=>{
+     const removed=Boolean(x.arquivado_em);
+     const status=removed?"Removido":x.ativo?"Ativo":"Inativo";
+     const contact=x.tipo==="admin"?"Geral (Configurações)":removed?"—":x.whatsapp?`${esc(x.whatsapp)}${x.whatsapp_opt_in?"":" · Sem autorização"}`:"<strong>Não cadastrado</strong>";
+     const login=removed?"Acesso desvinculado":x.auth_user_id?"Cadastro concluído":x.tipo==="admin"?"Conta administrativa":"Convite pendente";
+     const actions=x.tipo==="admin"?"<span class='hint'>Perfil fixo</span>":removed?"<span class='hint'>Removido (histórico preservado)</span>":`<button data-staff-edit="${esc(x.id)}">Editar contato</button>`+(!x.auth_user_id?`<button data-staff-invite="${esc(x.id)}">Gerar QR Code</button>`:"")+`<button data-staff-toggle="${esc(x.id)}" data-active="${x.ativo}">${x.ativo?"Desativar":"Ativar"}</button><button data-staff-delete="${esc(x.id)}">Remover</button>`;
+     return `<tr><td>${esc(x.nome)}</td><td>${x.tipo==="admin"?"Administradora":"Funcionária"}</td><td>${contact}</td><td>${status}</td><td>${login}</td><td>${actions}</td></tr>`;
+   }).join("")}</tbody></table>`:"<p class='hint'>Nenhum profissional nesta lista.</p>";
+   $("#staffTable").innerHTML=control+table;
+ }
  async function loadStaff(){
    const {data,error}=await db.from("profissionais").select("*").order("ordem").order("nome");
-   if(error){$("#staffTable").textContent=error.message;return;}
+   if(error){$("#staffTable").textContent="Não foi possível consultar a equipe: "+error.message;return;}
    staffRows=data||[];
-   $("#staffTable").innerHTML=staffRows.length?`<table><thead><tr><th>Profissional</th><th>Perfil</th><th>WhatsApp</th><th>Status</th><th>Login</th><th>Ações</th></tr></thead><tbody>${staffRows.map(x=>`<tr><td>${esc(x.nome)}</td><td>${x.tipo==="admin"?"Administradora":"Funcionária"}</td><td>${x.tipo==="admin"?"Geral (Configurações)":x.whatsapp?`${esc(x.whatsapp)}${x.whatsapp_opt_in?"":" · Sem autorização"}`:"<strong>Não cadastrado</strong>"}</td><td>${x.ativo?"Ativo":"Inativo"}</td><td>${x.auth_user_id?"Cadastro concluído":(x.tipo==="admin"?"Conta administrativa":"Convite pendente")}</td><td>${x.tipo!=="admin"?`<button data-staff-edit="${x.id}">Editar contato</button>`+(!x.auth_user_id?`<button data-staff-invite="${x.id}">Gerar QR Code</button>`:"")+`<button data-staff-toggle="${x.id}" data-active="${x.ativo}">${x.ativo?"Desativar":"Ativar"}</button><button data-staff-delete="${x.id}">Excluir</button>`:"<span class='hint'>Perfil fixo</span>"}</td></tr>`).join("")}</tbody></table>`:"Nenhum profissional cadastrado.";
+   renderStaffRows();
  }
+ document.addEventListener("change",e=>{
+   if(e.target?.id==="showArchivedStaff"){
+     showArchivedStaff=Boolean(e.target.checked);
+     renderStaffRows();
+   }
+ });
  let staffEditingId=null;
  function openStaffForm(row=null){
    const form=$("#staffForm");
@@ -123,7 +146,27 @@
    const invite=e.target.closest("[data-staff-invite]");
    if(invite){invite.disabled=true;const {data,error}=await db.functions.invoke("create-staff-invite",{body:{staff_id:invite.dataset.staffInvite}});invite.disabled=false;if(error||!data?.url){alert("Não foi possível gerar o convite. Confira se a Edge Function create-staff-invite foi publicada. "+(error?.message||""));return;}$("#invitePanel").classList.remove("hidden");$("#inviteDescription").textContent="Convite para "+(staffRows.find(x=>x.id===invite.dataset.staffInvite)?.nome||"funcionário");$("#inviteQr").innerHTML="";new QRCode($("#inviteQr"),{text:data.url,width:220,height:220});$("#inviteUrl").textContent=data.url;$("#invitePanel").scrollIntoView({behavior:"smooth"});}
    const toggle=e.target.closest("[data-staff-toggle]");if(toggle){const {error}=await db.from("profissionais").update({ativo:toggle.dataset.active!=="true"}).eq("id",toggle.dataset.staffToggle);if(error)alert(error.message);loadStaff();}
-   const del=e.target.closest("[data-staff-delete]");if(del&&confirm("Excluir este profissional? Agendamentos antigos serão preservados, mas não será possível apagar o perfil se houver reservas vinculadas.")){const {error}=await db.from("profissionais").delete().eq("id",del.dataset.staffDelete);if(error)alert(error.message);loadStaff();}
+   const del=e.target.closest("[data-staff-delete]");
+   if(del){
+     const person=staffRows.find(x=>x.id===del.dataset.staffDelete);
+     if(!person||person.tipo!=="funcionario"||person.arquivado_em)return;
+     const ok=confirm(`Remover ${person.nome} da equipe?\n\nA pessoa deixará de aparecer nos novos agendamentos e perderá o acesso ao painel. O histórico de atendimentos, avaliações e rendimentos será preservado.\n\nSe houver reservas pendentes ou confirmadas, será necessário resolvê-las antes.`);
+     if(!ok)return;
+     del.disabled=true;
+     try{
+       const {data,error}=await db.rpc("arquivar_profissional",{p_profissional_id:person.id});
+       if(error)throw error;
+       if(!data?.success)throw new Error(data?.message||"Não foi possível remover este profissional.");
+       alert(`${person.nome} foi removido da equipe. Agendamentos antigos e rendimentos continuam preservados.`);
+       await loadStaff();
+     }catch(error){
+       console.error("Falha ao remover profissional:",error);
+       const msg=/could not find the function|pgrst202/i.test(error.message||"")
+         ?"A função arquivar_profissional não foi encontrada. Execute o SQL do pacote no Supabase e atualize a página."
+         :error.message||"Verifique o Supabase.";
+       alert("Não foi possível remover este profissional: "+msg);
+     }finally{del.disabled=false;}
+   }
  });
  $("#closeInvite").addEventListener("click",()=>$("#invitePanel").classList.add("hidden"));
  async function loadHours(){let {data,error}=await db.from("disponibilidade_semanal").select("*").order("dia_semana");if(error)return;let map=new Map((data||[]).map(x=>[x.dia_semana,x]));$("#weeklyHours").innerHTML=days.map((name,i)=>{let x=map.get(i)||{};return `<div class="day-row"><b>${name}</b><input type="checkbox" name="active_${i}" ${x.ativo?"checked":""} aria-label="Ativar ${name}"><input type="time" name="start_${i}" value="${x.horario_inicio||"09:00"}" title="Início"><input type="time" name="end_${i}" value="${x.horario_fim||"18:00"}" title="Fim"><input type="time" name="break_start_${i}" value="${x.intervalo_inicio||""}" title="Início do intervalo"><input type="time" name="break_end_${i}" value="${x.intervalo_fim||""}" title="Fim do intervalo"></div>`}).join("");let {data:blocks}=await db.from("bloqueios").select("*").gte("data",today()).order("data");$("#blocksList").innerHTML=(blocks||[]).map(x=>`<p class="hint">${new Date(x.data+"T12:00:00").toLocaleDateString("pt-BR")} · ${esc(x.descricao)} <button data-block-delete="${x.id}">Remover</button></p>`).join("")}
