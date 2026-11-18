@@ -7,7 +7,7 @@
   NUNCA coloque service_role key neste arquivo.
 */
 window.STUDIO_CONFIG = {
-  SUPABASE_URL: "COLE_AQUI_A_URL_DO_PROJETO",
-  SUPABASE_ANON_KEY: "COLE_AQUI_A_CHAVE_ANON_PUBLIC",
+  SUPABASE_URL: "https://vvtqgezrctmsznvjtzjt.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_lOuBkOGU5W2odW20iVtmi5JEtPJx2",
   WHATSAPP: "5522992072123"
 };
